@@ -3,7 +3,7 @@ from fastapi.response import JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import tensorflow as tf
-import tensforflow_hub as hub
+import tensorflow_hub as hub
 import numpy as np
 from PIL import Image
 import io
@@ -67,3 +67,80 @@ async def root():
         "version" : "1.0.0",
         "status" : "operational"
     }
+
+@app.get("/health")
+async def health_check():
+    """Health Check Endpoint"""
+    models_status = {
+        name: "loaded" if name in loaded_models else "not_loaded" for name in MODELS.keys()
+    }
+
+    return {
+        "status" : "healthy",
+        "models" : models_status,
+        "total_models" : len(MODELS)
+    }
+
+@app.get("/models", response_model=List[ModelInfo])
+async def list_models():
+    """List of all available models"""
+    models_info = []
+    for name, config in MODELS.items():
+        models_info.append(ModelInfo(
+            name = name,
+            description = config["description"],
+            type = config["type"],
+            status = "loaded" if name in loaded_models else "not_loaded"
+        ))
+    return models_info
+
+
+@app.post("/predict/{model_name}", response_model = PredictionResponse)
+async def predict(model_name:str, file: UploadFile = File(...)):
+    """Make predictions using Specified Model"""
+    import time
+    if model_name not in MODELS:
+        raise HTTPException(status_code = 404, detail = f"Model {model_name} not found")
+    
+    if model_name not in loaded_models:
+        raise HTTPException(status_code = 503, detail = f"Model {model_name} not loaded")
+    
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents))
+        target_size = MODELS[model_name]["input_shape"][:2]
+        image = image.resize(target_size)
+        
+        # Convert to array and normalize
+        img_array = np.array(image) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+        
+        # Make prediction
+        start_time = time.time()
+        predictions = loaded_models[model_name](img_array)
+        inference_time = (time.time() - start_time) * 1000  # Convert to ms
+        
+        # Get top 5 predictions
+        top_k = tf.nn.top_k(predictions, k=5)
+
+        results = []
+        for i in range(5):
+            results.append({
+                "class_id": int(top_k.indices[0][i].numpy()),
+                "confidence": float(top_k.values[0][i].numpy())
+            })
+        
+        return PredictionResponse(
+            model=model_name,
+            predictions=results,
+            inference_time_ms=round(inference_time, 2)
+        )
+
+    except Exception as e:
+        logger.error(f"Prediction Error: {str(e)}")
+        raise HTTPException(status_code = 500, detail = str(e))
+    
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
