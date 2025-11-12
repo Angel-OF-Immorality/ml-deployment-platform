@@ -112,8 +112,8 @@ async def predict(model_name:str, file: UploadFile = File(...)):
         image = image.resize(target_size)
         
         # Convert to array and normalize
-        img_array = np.array(image) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
+        img_array = np.array(image, dtype=np.float32) / 255.0
+        img_array = np.expand_dims(img_array, axis=0).astype(np.float32)
         
         # Make prediction
         start_time = time.time()
