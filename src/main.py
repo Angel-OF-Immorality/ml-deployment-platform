@@ -8,9 +8,20 @@ import numpy as np
 from PIL import Image
 import io
 import logging
+import mlflow
+import mlflow.tensorflow
+import os
+from datetime import datetime
 
 logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Configure MLflow
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment("ml-deployment-platform")
+
+logger.info(f"MLflow tracking URI: {MLFLOW_TRACKING_URI}")
 
 app = FastAPI(
     title = "ML Development Platform",
@@ -23,7 +34,10 @@ MODELS = {
         "url" : "https://tfhub.dev/google/tf2-preview/mobilenet_v2/classification/4",
         "description" : "Mobile Net V2 for image classification",
         "input_shape" : (224,224,3),
-        "type" : "image_classification"
+        "type" : "image_classification",
+        "version": "1.0.0",
+        "framework": "tensorflow",
+        "framework_version": "2.14.0"
     }
 }
 
@@ -38,7 +52,8 @@ class ModelInfo(BaseModel):
     description : str
     type : str
     status : str
-    # version = Optional[str]
+    version : str
+    framework : str
     # accuracy = Optional[float]
 
 class PredictionResponse(BaseModel):
@@ -47,14 +62,26 @@ class PredictionResponse(BaseModel):
     inference_time_ms : float
 
 @app.on_event("startup")
-async def load_model():
+async def load_models():
     """Load Models on Startup"""
     logger.info("Loading Models Now...")
     try:
         for model_name, model_config in MODELS.items():
             logger.info(f"Loading {model_name}...")
-            loaded_models[model_name] = hub.load(model_config["url"])
-            logger.info(f"✓ {model_name} loaded successfully")
+
+            with mlflow.start_run(run_name = f"load_{model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+                loaded_models[model_name] = hub.load(model_config["url"])
+                
+                mlflow.log_param("model_name", model_name)
+                mlflow.log_param("model_type", model_config["type"])
+                mlflow.log_param("model_url", model_config["url"])
+                mlflow.log_param("input_shape", str(model_config["input_shape"]))
+                mlflow.set_tag("stage", "model_loading")
+                mlflow.set_tag("version", "1.0.0")
+
+                logger.info(f"✓ {model_name} loaded successfully")
+                logger.info(f"✓ {model_name} metadata logged to MLflow")
+
     except Exception as e:
         logger.error(f"Error loading models: {str(e)}")
 
@@ -81,6 +108,23 @@ async def health_check():
         "total_models" : len(MODELS)
     }
 
+@app.get("/mlflow/health")
+async def mlflow_health():
+    "Check MLFLow Connection"
+    try:
+        client = mlflow.tracking.MlflowClient()
+        experiments = client.search_experiments()
+        return {
+            "status" : "connected",
+            "tracking_uri" : MLFLOW_TRACKING_URI,
+            "experiments_count" : len(experiments)
+        }
+    except Exception as e:
+        return {
+            "status" : "disconnected",
+            "error" : str(e)
+        }
+
 @app.get("/models", response_model=List[ModelInfo])
 async def list_models():
     """List of all available models"""
@@ -90,7 +134,9 @@ async def list_models():
             name = name,
             description = config["description"],
             type = config["type"],
-            status = "loaded" if name in loaded_models else "not_loaded"
+            status = "loaded" if name in loaded_models else "not_loaded",
+            version = config["version"],
+            framework = config["framework"]
         ))
     return models_info
 
@@ -105,40 +151,69 @@ async def predict(model_name:str, file: UploadFile = File(...)):
     if model_name not in loaded_models:
         raise HTTPException(status_code = 503, detail = f"Model {model_name} not loaded")
     
-    try:
-        contents = await file.read()
-        image = Image.open(io.BytesIO(contents))
-        target_size = MODELS[model_name]["input_shape"][:2]
-        image = image.resize(target_size)
-        
-        # Convert to array and normalize
-        img_array = np.array(image, dtype=np.float32) / 255.0
-        img_array = np.expand_dims(img_array, axis=0).astype(np.float32)
-        
-        # Make prediction
-        start_time = time.time()
-        predictions = loaded_models[model_name](img_array)
-        inference_time = (time.time() - start_time) * 1000  # Convert to ms
-        
-        # Get top 5 predictions
-        top_k = tf.nn.top_k(predictions, k=5)
+    with mlflow.start_run(run_name=f"predict_{model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+        try:
 
-        results = []
-        for i in range(5):
-            results.append({
-                "class_id": int(top_k.indices[0][i].numpy()),
-                "confidence": float(top_k.values[0][i].numpy())
-            })
-        
-        return PredictionResponse(
-            model=model_name,
-            predictions=results,
-            inference_time_ms=round(inference_time, 2)
-        )
+            mlflow.log_param("model_name", model_name)
+            mlflow.log_param("image_filename", file.filename)
+            mlflow.set_tag("stage", "inference")
 
-    except Exception as e:
-        logger.error(f"Prediction Error: {str(e)}")
-        raise HTTPException(status_code = 500, detail = str(e))
+            contents = await file.read()
+            image = Image.open(io.BytesIO(contents))
+
+            mlflow.log_param("image_mode", image.mode)
+            mlflow.log_param("image_size", f"{image.size[0]}x{image.size[1]}")
+
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+
+            target_size = MODELS[model_name]["input_shape"][:2]
+            image = image.resize(target_size)
+            
+            # Convert to array and normalize
+            img_array = np.array(image, dtype=np.float32) / 255.0
+            img_array = np.expand_dims(img_array, axis=0).astype(np.float32)
+            
+            # Make prediction
+            start_time = time.time()
+            predictions = loaded_models[model_name](img_array)
+            predictions = tf.nn.softmax(predictions)
+            inference_time = (time.time() - start_time) * 1000  # Convert to ms
+            
+            mlflow.log_metric("inference_time_ms", inference_time)
+            
+            # Get top 5 predictions
+            top_k = tf.nn.top_k(predictions, k=5)
+
+            results = []
+            for i in range(5):
+                class_id =  int(top_k.indices[0][i].numpy()),
+                confidence = float(top_k.values[0][i].numpy())
+                results.append({
+                    "class_id" : class_id,
+                    "confidence" : confidence
+                })
+
+            mlflow.log_metric("top_confidence", results[0]["confidence"])
+            mlflow.log_param("top_class_id", results[0]["class_id"])
+            
+            #logging all predictions:
+            for i, pred in enumerate(results):
+                mlflow.log_metric(f"class_{i+1}_confidence", pred["confidence"])
+                mlflow.log_param(f"class_{i+1}_id", pred["class_id"])
+            logger.info(f"Prediction logged to MLFlow - Top Class: {results[0]['class_id']}, Confidence: {results[0]['confidence']:.4f}")
+
+            return PredictionResponse(
+                model=model_name,
+                predictions=results,
+                inference_time_ms=round(inference_time, 2)
+            )
+
+        except Exception as e:
+            mlflow.log_param("error", str(e))
+            mlflow.set_tag("status", "failed")
+            logger.error(f"Prediction Error: {str(e)}")
+            raise HTTPException(status_code = 500, detail = str(e))
     
 if __name__ == "__main__":
     import uvicorn
