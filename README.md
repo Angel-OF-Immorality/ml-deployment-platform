@@ -8,6 +8,7 @@ Production-grade ML model deployment platform with experiment tracking, containe
 <!-- - **Docker** multi-stage builds (86% size reduction)  -->
 - **Kubernetes** deployment with service discovery
 - Automated logging of predictions and metrics
+- **Prometheus + Grafana** CPU Usage and API Health monitoring
 
 ---
 
@@ -108,6 +109,47 @@ kubectl logs -l app=ml-api
 # Access MLflow
 kubectl port-forward svc/mlflow-service 5000:5000
 ```
+---
+
+## Monitoring - Prometheus + Grafana
+
+### Architecture
+- Deployed Prometheus and Grafana pods to K8
+- Exposed metrics (memory, CPU, request metrics) from FastAPI
+- Scraped metrics using Prometheus
+- Visualized Metrics with Grafana
+
+### Access Grafana Dashboard
+**Start Grafana:**
+```bash
+# Get Grafana URL
+minikube service grafana-service --url
+
+# Open in browser (example URL)
+open http://127.0.0.1:30002
+```
+
+**Login credentials:**
+- Username: `admin`
+- Password: `admin`
+
+**View dashboards:**
+1. Click "Dashboards" in left sidebar
+2. Select "ML API Health" (or your dashboard name)
+3. Real-time metrics update every 15 seconds
+
+![Grafana Dashboard](docs/grafana_dashboard.png)
+
+### Access Prometheus
+```bash
+# Get Prometheus URL
+minikube service prometheus-service --url
+
+# Open in browser
+open http://127.0.0.1:30001
+```
+
+---
 
 ### Future Enhancements
 - [ ] Persistent Volumes for MLflow data
@@ -116,7 +158,6 @@ kubectl port-forward svc/mlflow-service 5000:5000
 - [ ] Horizontal Pod Autoscaling
 - [ ] Ingress controller for production routing
 
----
 
 ## Local Development (Docker Compose)
 ```bash
