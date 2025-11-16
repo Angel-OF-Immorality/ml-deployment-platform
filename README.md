@@ -138,7 +138,7 @@ open http://127.0.0.1:30002
 2. Select "ML API Health" (or your dashboard name)
 3. Real-time metrics update every 15 seconds
 
-![Grafana Dashboard](docs/grafana_dashboard.png)
+![Grafana Dashboard](docs/grafana.png)
 
 ### Access Prometheus
 ```bash
