@@ -12,6 +12,10 @@ import mlflow
 import mlflow.tensorflow
 import os
 from datetime import datetime
+# from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
+import time
 
 logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger(__name__)
@@ -95,6 +99,17 @@ async def root():
         "status" : "operational"
     }
 
+# Prometheus metrics
+# REQUEST_COUNT = Counter('ml_api_requests_v2_total', 'Total API requests', ['endpoint', 'method'])
+# REQUEST_DURATION = Histogram('ml_api_request_duration_v2_seconds', 'Request duration', ['endpoint'])
+# PREDICTION_COUNT = Counter('ml_predictions_v2_total', 'Total predictions', ['model'])
+
+@app.get("/metrics")
+async def metrics():
+    return Response(
+        generate_latest(),media_type=CONTENT_TYPE_LATEST
+    )
+
 @app.get("/health")
 async def health_check():
     """Health Check Endpoint"""
@@ -144,7 +159,7 @@ async def list_models():
 @app.post("/predict/{model_name}", response_model = PredictionResponse)
 async def predict(model_name:str, file: UploadFile = File(...)):
     """Make predictions using Specified Model"""
-    import time
+
     if model_name not in MODELS:
         raise HTTPException(status_code = 404, detail = f"Model {model_name} not found")
     
@@ -180,6 +195,7 @@ async def predict(model_name:str, file: UploadFile = File(...)):
             predictions = tf.nn.softmax(predictions)
             inference_time = (time.time() - start_time) * 1000  # Convert to ms
             
+            # REQUEST_COUNT.labels(endpoint='predict_' + model_name, method='POST').inc()
             mlflow.log_metric("inference_time_ms", inference_time)
             
             # Get top 5 predictions
@@ -187,7 +203,7 @@ async def predict(model_name:str, file: UploadFile = File(...)):
 
             results = []
             for i in range(5):
-                class_id =  int(top_k.indices[0][i].numpy()),
+                class_id = int(top_k.indices[0][i].numpy())
                 confidence = float(top_k.values[0][i].numpy())
                 results.append({
                     "class_id" : class_id,
@@ -203,12 +219,14 @@ async def predict(model_name:str, file: UploadFile = File(...)):
                 mlflow.log_param(f"class_{i+1}_id", pred["class_id"])
             logger.info(f"Prediction logged to MLFlow - Top Class: {results[0]['class_id']}, Confidence: {results[0]['confidence']:.4f}")
 
+            # PREDICTION_COUNT.labels(model=model_name).inc()
+            # REQUEST_DURATION.labels(endpoint='predict_' + model_name).observe(inference_time/1000)
+
             return PredictionResponse(
                 model=model_name,
                 predictions=results,
                 inference_time_ms=round(inference_time, 2)
             )
-
         except Exception as e:
             mlflow.log_param("error", str(e))
             mlflow.set_tag("status", "failed")
