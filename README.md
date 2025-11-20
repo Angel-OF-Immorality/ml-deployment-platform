@@ -1,6 +1,11 @@
 # ML Deployment Platform
 
-Production-grade ML model deployment platform with experiment tracking, containerization, and Kubernetes orchestration.
+**Production-ready Kubernetes deployment with cost optimization, monitoring, and AWS cloud integration**
+
+[![Kubernetes](https://img.shields.io/badge/kubernetes-deployed-326CE5?logo=kubernetes)](.)
+[![AWS ECR](https://img.shields.io/badge/AWS-ECR%20Ready-FF9900?logo=amazon-aws)](.)
+[![Monitoring](https://img.shields.io/badge/monitoring-Prometheus%20%2B%20Grafana-E6522C?logo=prometheus)](.)
+
 
 ## Features
 - **FastAPI** backend for model serving
@@ -9,8 +14,18 @@ Production-grade ML model deployment platform with experiment tracking, containe
 - **Kubernetes** deployment with service discovery
 - Automated logging of predictions and metrics
 - **Prometheus + Grafana** CPU Usage and API Health monitoring
+- Production-ready K8s manifests. Can deploy to any managed service (EKS/GKE/AKS)
 
 ---
+
+## 🚀 Cloud Deployment Experience
+**AWS EKS/ECR Implementation**
+- Pushed 2.36GB containerized ML platform to AWS Elastic Container Registry
+- Deployed to Kubernetes (local + cloud-ready manifests for EKS/GKE/AKS)
+- Debugged CloudFormation failures, implemented emergency cost controls
+- **Cost optimization:** Identified and terminated orphaned resources within 30 minutes (prevented ₹100+/day overrun)
+
+[Read full AWS deployment story →](#aws-deployment-details)
 
 ## MLflow Integrated 🔬
 
@@ -158,6 +173,45 @@ open http://127.0.0.1:30001
 - [ ] Horizontal Pod Autoscaling
 - [ ] Ingress controller for production routing
 
+---
+
+## AWS Deployment Details
+
+### Objective
+Deploy containerized ML platform to AWS Elastic Kubernetes Service (EKS) in Mumbai region.
+
+### Implementation Steps
+1. **ECR Setup:** Pushed 2.36GB Docker image to Elastic Container Registry
+```bash
+   aws ecr create-repository --repository-name ml-platform-api --region ap-south-1
+   aws ecr get-login-password | docker login ...
+   docker push ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/ml-platform-api:latest
+```
+
+2. **EKS Cluster Creation:** Used `eksctl` for managed Kubernetes
+```bash
+   eksctl create cluster --name ml-platform --region ap-south-1 \
+     --nodegroup-name workers --node-type t3.small --nodes 2
+```
+
+3. **Incident Response:** Node capacity failure left 6 EC2 instances stopped with 48GB EBS volumes
+   - Diagnosed via CloudFormation stack events
+   - Force-deleted stuck resources using AWS CLI
+   - Prevented cost overrun (was tracking toward ₹100+/day)
+
+### Key Learnings
+- ✅ Production Kubernetes deployment workflow (local → ECR → EKS)
+- ✅ AWS IAM permissions and CloudFormation debugging
+- ✅ Real-time cost monitoring and resource cleanup
+- ✅ Incident response under time pressure
+
+### Tools Used
+`AWS CLI` · `eksctl` · `kubectl` · `CloudFormation` · `ECR` · `EKS` · `EC2` · `EBS`
+
+### Interview Story
+> "I attempted EKS deployment and hit a node capacity failure. Six instances got stuck in 'stopped' state with 48GB of attached EBS volumes - my AWS Free Tier usage spiked to 145%. I debugged CloudFormation events, force-deleted stacks, and manually terminated all resources in under 30 minutes. Total cost: ₹17. This taught me to always verify region capacity and set billing alarms before provisioning production infrastructure."
+
+**Status:** Production-ready K8s manifests. Can deploy to any managed service (EKS/GKE/AKS) in <15 minutes.
 
 ## Local Development (Docker Compose)
 ```bash
