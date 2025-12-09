@@ -1,6 +1,8 @@
 __pycache__/
 *.py[cod]
+*.pyc
 *$py.class
+.pytest_cache/
 *.so
 .Python
 venv/
@@ -14,3 +16,9 @@ Thumbs.db
 *.log
 .env
 .env.local
+.env.
+*-secret.yaml
+secrets/
+*.secret
+*.tfstate
+*.tfstate.backup
