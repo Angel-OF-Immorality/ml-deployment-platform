@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: alertmanager
+  namespace: default
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: alertmanager
+  template: 
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:v0.29.0
+        args: 
+          - '--config.file=/etc/alertmanager/alertmanager.yml'
+          - '--storage.path=/alertmanager'
+        ports:  
+        - containerPort: 9093
+          name: web
+        env:
+        - name: SMTP_FROM
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-smtp
+              key: smtp_from
+        - name: SMTP_AUTH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-smtp
+              key: smtp_auth_username
+        - name: SMTP_AUTH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-smtp
+              key: smtp_auth_password
+        - name: SMTP_EMAIL_TO
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-smtp
+              key: email_to
+        volumeMounts:
+        - name: config
+          mountPath: /etc/alertmanager
+        - name: config-template
+          mountPath: /etc/alertmanager-template
+          subPath: alertmanager.yml
+        resources:
+          requests:
+            memory: "126Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      initContainers:  
+      - name: config-templater
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          sed "s/PLACEHOLDER_EMAIL/$SMTP_FROM/g; s/PLACEHOLDER_PASSWORD/$SMTP_AUTH_PASSWORD/g" \
+            /etc/alertmanager-template/alertmanager.yml > /etc/alertmanager-out/alertmanager.yml
+        env:
+        - name: SMTP_FROM
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-smtp
+              key: smtp_from
+        - name: SMTP_AUTH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-smtp
+              key: smtp_auth_password
+        volumeMounts:
+        - name: config
+          mountPath: /etc/alertmanager-out
+        - name: config-template
+          mountPath: /etc/alertmanager-template
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: config-template
+          configMap: 
+            name: alertmanager-config
+        
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: default
+spec:
+  selector:
+    app: alertmanager
+  ports:
+    - port: 9093
+      targetPort: 9093

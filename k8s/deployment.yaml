@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: ml-api
-        image: ml-deployment-platform-api:latest
+        image: ml-api:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 8000
