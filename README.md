@@ -218,3 +218,22 @@ Deploy containerized ML platform to AWS Elastic Kubernetes Service (EKS) in Mumb
 docker-compose up
 open http://localhost:8000/docs
 ```
+
+
+
+## Setup Instructions
+
+### Email Alerts Configuration
+
+The AlertManager email credentials are stored in a Kubernetes Secret (not in Git). You will have to setup the secret in cluster before running.
+
+**To set up on a new cluster:**
+```bash
+kubectl create secret generic alertmanager-smtp \
+  --from-literal=smtp_from='your-email@gmail.com' \
+  --from-literal=smtp_auth_username='your-email@gmail.com' \
+  --from-literal=smtp_auth_password='your-gmail-app-password' \
+  --from-literal=email_to='alert-recipient@example.com'
+```
+
+Get Gmail App Password: https://myaccount.google.com/apppasswords
