@@ -28,7 +28,7 @@ mlflow.set_experiment("ml-deployment-platform")
 logger.info(f"MLflow tracking URI: {MLFLOW_TRACKING_URI}")
 
 app = FastAPI(
-    title = "ML Development Platform",
+    title = "ML Deployment Platform",
     description = "Automated ML model serving Platform",
     version = "1.0.0"
 )
@@ -94,7 +94,7 @@ async def load_models():
 async def root():
     """Root Endpoint"""
     return {
-        "service" : "ML deployment Platform",
+        "service" : "ML Deployment Platform",
         "version" : "1.0.0",
         "status" : "operational"
     }
@@ -125,7 +125,7 @@ async def health_check():
 
 @app.get("/mlflow/health")
 async def mlflow_health():
-    "Check MLFLow Connection"
+    """Check MLFLow Connection"""
     try:
         client = mlflow.tracking.MlflowClient()
         experiments = client.search_experiments()
