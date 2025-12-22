@@ -23,5 +23,6 @@ repos:
         entry: pytest
         language: system
         pass_filenames: false
-        always_run: true
+        always_run: false
         args: [tests/, --cov=src, --cov-fail-under=70, -q, --no-cov-on-fail]
+        exclude: '(\.coverage|coverage\.xml)$'
