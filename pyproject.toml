@@ -21,3 +21,7 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 omit = ["*/tests/*", "*/venv/*"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "venv"]
+skips = ["B101", "B104"] # skip assert_used (needed in test)
