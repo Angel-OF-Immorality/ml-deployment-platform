@@ -1,7 +1,7 @@
 # Testing
 pytest==8.0.0
 pytest-cov==4.1.0
-pytest-asyncio==0.23.3
+pytest-asyncio==0.21.1  
 httpx==0.26.0
 
 # Linting & Formatting
@@ -13,5 +13,5 @@ mypy==1.8.0
 bandit[toml]==1.7.6
 pip-audit==2.7.0
 
-#Compatibility tests
-pip-tools==7.3.0
+# Dependency management
+pip-tools==7.4.0
