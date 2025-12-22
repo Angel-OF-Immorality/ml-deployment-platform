@@ -12,3 +12,6 @@ mypy==1.8.0
 # Security
 bandit[toml]==1.7.6
 pip-audit==2.7.0
+
+#Compatibility tests
+pip-tools==7.3.0

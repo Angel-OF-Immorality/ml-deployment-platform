@@ -1,11 +1,14 @@
 __pycache__/
 *.py[cod]
 *.pyc
+*.pyo
+*.pyd
 *$py.class
 .pytest_cache/
 *.so
 .Python
 venv/
+.venv/
 ENV/
 .vscode/
 .idea/
@@ -22,3 +25,8 @@ secrets/
 *.secret
 *.tfstate
 *.tfstate.backup
+.gitignore
+.coverage
+coverage.xml
+htmlcov/
+EOF
