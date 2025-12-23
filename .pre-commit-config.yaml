@@ -19,10 +19,8 @@ repos:
   - repo: local
     hooks:
       - id: pytest-check
-        name: pytest
-        entry: pytest
+        name: pytest-fast
+        entry: bash -c 'pytest tests/ --cov=src --cov-fail-under=70 -q --no-cov'
         language: system
         pass_filenames: false
-        always_run: false
-        args: [tests/, --cov=src, --cov-fail-under=70, -q, --no-cov-on-fail]
-        exclude: '(\.coverage|coverage\.xml)$'
+        always_run: true
