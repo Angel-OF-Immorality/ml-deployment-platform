@@ -1,20 +1,45 @@
 # ML Deployment Platform
 
-**Production-ready Kubernetes deployment with cost optimization, monitoring, and AWS cloud integration**
+**Production-ready Kubernetes deployment with monitoring, comprehensive CI/CD with integration testing and EC2 deployment ready**
 
-[![Kubernetes](https://img.shields.io/badge/kubernetes-deployed-326CE5?logo=kubernetes)](.)
-[![AWS ECR](https://img.shields.io/badge/AWS-ECR%20Ready-FF9900?logo=amazon-aws)](.)
-[![Monitoring](https://img.shields.io/badge/monitoring-Prometheus%20%2B%20Grafana-E6522C?logo=prometheus)](.)
+[![CI Pipeline](https://github.com/Angel-OF-Immorality/ml-deployment-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Angel-OF-Immorality/ml-deployment-platform/actions)
+[![Docker Hub](https://img.shields.io/docker/v/hashedname/ml-deployment-platform?label=docker)](https://hub.docker.com/r/<YOUR-DOCKERHUB-USERNAME>/ml-deployment-platform)
+[![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Code Coverage](https://img.shields.io/badge/coverage-82%25-brightgreen.svg)](https://github.com/Angel-OF-Immorality/ml-deployment-platform)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+### Key Achievements
+- 🏗️ **82% Test Coverage** with mocked dependencies for fast CI execution
+- 🐳 **2.26GB Docker Image** optimized through multi-stage builds (60% reduction)
+- ⚡ **8-minute CI/CD Pipeline** with fail-fast architecture (lint → test → build)
+- 🔒 **Security-First** approach with Bandit, pip-audit, and non-root containers
+- 📊 **Production Monitoring** with Prometheus, Grafana, and MLflow integration
 
 
-## Features
-- **FastAPI** backend for model serving
-- **MLflow** integration for experiment tracking and model versioning
-<!-- - **Docker** multi-stage builds (86% size reduction)  -->
-- **Kubernetes** deployment with service discovery
-- Automated logging of predictions and metrics
-- **Prometheus + Grafana** CPU Usage and API Health monitoring
-- Production-ready K8s manifests. Can deploy to any managed service (EKS/GKE/AKS)
+---
+
+## 🛠️ Tech Stack
+
+### Backend & ML
+- **FastAPI** - High-performance async API framework
+- **TensorFlow 2.18** - Deep learning model serving
+- **TensorFlow Hub** - Pre-trained model integration
+- **MLflow** - Experiment tracking and model registry
+- **Python 3.12** - Latest stable Python
+
+### DevOps & Infrastructure
+- **Docker** - Multi-stage builds with security hardening
+- **GitHub Actions** - 3-stage CI/CD pipeline
+- **Kubernetes** - Container orchestration (configs included)
+- **Prometheus + Grafana** - Metrics and monitoring
+- **pytest** - Comprehensive test suite
+
+### Code Quality & Security
+- **Ruff** - Fast Python linter (10-100x faster than flake8)
+- **Black** - Opinionated code formatter
+- **Bandit** - Security vulnerability scanner
+- **pip-audit** - Dependency vulnerability checking
+- **pre-commit** - Git hooks for local validation
 
 ---
 
@@ -23,9 +48,33 @@
 - Pushed 2.36GB containerized ML platform to AWS Elastic Container Registry
 - Deployed to Kubernetes (local + cloud-ready manifests for EKS/GKE/AKS)
 - Debugged CloudFormation failures, implemented emergency cost controls
-- **Cost optimization:** Identified and terminated orphaned resources within 30 minutes (prevented ₹100+/day overrun)
+- **Cost optimization:** Identified and terminated orphaned resources within 30 minutes (prevented overrun charge)
 
 [Read full AWS deployment story →](#aws-deployment-details)
+
+## 📋 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Service health and version info |
+| `/health` | GET | Detailed health check with model status |
+| `/models` | GET | List all available ML models |
+| `/predict/{model_name}` | POST | Make predictions with specified model |
+| `/metrics` | GET | Prometheus metrics endpoint |
+| `/mlflow/health` | GET | MLflow connection status |
+
+### Pipeline Architecture
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Lint &    │────▶│    Test     │────▶│    Build    │
+│  Security   │     │  (82% cov)  │     │   Docker    │
+│  (~1 min)   │     │  (~2 min)   │     │  (~5 min)   │
+└─────────────┘     └─────────────┘     └─────────────┘
+     ✓ Ruff              ✓ pytest           ✓ Multi-stage
+     ✓ Black             ✓ Coverage         ✓ Security scan
+     ✓ Bandit            ✓ Mocked deps      ✓ Push to Hub
+     ✓ pip-audit
+```
 
 ## MLflow Integrated 🔬
 
@@ -77,14 +126,6 @@ open http://localhost:5000
 ---
 
 ## Kubernetes Deployment
-
-### Architecture
-- **2 FastAPI pods** - Load balanced via Service
-- **1 MLflow pod** - Experiment tracking backend
-- **Services:** 
-  - `ml-api-service` (NodePort) - External access
-  - `mlflow-service` (ClusterIP) - Internal communication
-- **Service Discovery** - Pods communicate via K8s DNS
 
 ### Deploy to Minikube
 ```bash
@@ -197,7 +238,7 @@ Deploy containerized ML platform to AWS Elastic Kubernetes Service (EKS) in Mumb
 3. **Incident Response:** Node capacity failure left 6 EC2 instances stopped with 48GB EBS volumes
    - Diagnosed via CloudFormation stack events
    - Force-deleted stuck resources using AWS CLI
-   - Prevented cost overrun (was tracking toward ₹100+/day)
+   - Prevented cost overrun
 
 ### Key Learnings
 - ✅ Production Kubernetes deployment workflow (local → ECR → EKS)
@@ -237,3 +278,30 @@ kubectl create secret generic alertmanager-smtp \
 ```
 
 Get Gmail App Password: https://myaccount.google.com/apppasswords
+
+---
+
+## 🤝 Contributing
+
+This is a portfolio project, but feedback and suggestions are welcome!
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👤 Author
+
+**Chirag**
+
+- GitHub: [@Chirag](https://github.com/Angel-OF-Immorality)
+- LinkedIn: [Your LinkedIn](https://linkedin.com/in/)
